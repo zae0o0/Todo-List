@@ -1,10 +1,11 @@
 const inputBox = document.getElementById("input-box");
+const dueDateInput = document.getElementById("due-date");
 const listContainer = document.getElementById("list-container");
 const completedCounter = document.getElementById("completed-counter");
 const uncompletedCounter = document.getElementById("uncompleted-counter");
 const clearCompletedBtn = document.getElementById("clear-completed");
 const modeToggle = document.getElementById("mode-toggle");
-const modeLabel = document.getElementById("mode-label"); // <-- new label span
+const modeLabel = document.getElementById("mode-label");
 
 // ---- LocalStorage Helpers ----
 function saveTasks() {
@@ -19,6 +20,19 @@ function loadTasks() {
   }
 }
 
+// ---- Chart.js Setup ----
+let ctx = document.getElementById("progressChart").getContext("2d");
+let chart = new Chart(ctx, {
+  type: "doughnut",
+  data: {
+    labels: ["Completed", "Uncompleted"],
+    datasets: [{
+      data: [0, 0],
+      backgroundColor: ["#73cbed", "#fd9ed9"]
+    }]
+  }
+});
+
 // ---- Counter Update ----
 function updateCounters() {
   const completedTasks = document.querySelectorAll(".completed").length;
@@ -26,11 +40,15 @@ function updateCounters() {
   completedCounter.textContent = completedTasks;
   uncompletedCounter.textContent = uncompletedTasks;
   saveTasks();
+
+  chart.data.datasets[0].data = [completedTasks, uncompletedTasks];
+  chart.update();
 }
 
 // ---- Add New Task ----
 function addTask() {
   const task = inputBox.value.trim();
+  const dueDate = dueDateInput.value;
   if (!task) {
     alert("Please write down a task");
     return;
@@ -42,17 +60,29 @@ function addTask() {
       <input type="checkbox">
       <span>${task}</span>
     </label>
+    <span class="due">${dueDate || "No due date"}</span>
     <span class="edit-btn">Edit</span>
     <span class="delete-btn">Delete</span>
   `;
   listContainer.appendChild(li);
   inputBox.value = "";
+  dueDateInput.value = "";
+
+  if (dueDate) {
+    const today = new Date().toISOString().split("T")[0];
+    if (dueDate < today) {
+      li.classList.add("overdue");
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("⏰ Task overdue: " + task);
+      }
+    }
+  }
 
   attachEvents(li);
   updateCounters();
 }
 
-// ---- Attach Events to Task ----
+// ---- Attach Events ----
 function attachEvents(li) {
   const checkbox = li.querySelector("input");
   const taskSpan = li.querySelector("span");
@@ -68,7 +98,7 @@ function attachEvents(li) {
     const update = prompt("Edit task:", taskSpan.textContent);
     if (update !== null && update.trim() !== "") {
       taskSpan.textContent = update.trim();
-      li.classList.remove("completed");
+      li.classList.remove("completed", "overdue");
       checkbox.checked = false;
       updateCounters();
     }
@@ -80,7 +110,7 @@ function attachEvents(li) {
   });
 }
 
-// ---- Reattach Events after Loading ----
+// ---- Reattach Events ----
 function reattachEvents() {
   const allItems = listContainer.querySelectorAll("li");
   allItems.forEach(li => attachEvents(li));
@@ -97,20 +127,22 @@ modeToggle.addEventListener("change", function () {
   const darkModeOn = modeToggle.checked;
   document.body.classList.toggle("dark-mode", darkModeOn);
   localStorage.setItem("darkMode", darkModeOn);
-
-  // Update label
   modeLabel.textContent = darkModeOn ? "☀️ Light Mode" : "🌙 Dark Mode";
 });
 
-// ---- On Page Load ----
+// ---- On Load ----
 window.onload = function () {
   loadTasks();
+  if ("Notification" in window && Notification.permission !== "granted") {
+    Notification.requestPermission();
+  }
   if (localStorage.getItem("darkMode") === "true") {
     document.body.classList.add("dark-mode");
     modeToggle.checked = true;
     modeLabel.textContent = "☀️ Light Mode";
-  } else {
-    modeLabel.textContent = "🌙 Dark Mode";
   }
+  new Sortable(listContainer, { animation: 150, onEnd: saveTasks });
 };
-
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}

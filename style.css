@@ -169,4 +169,21 @@ input:checked + .slider:before {
   font-size: 14px;
   margin-bottom: 3px;
 }
+#due-date {
+  width: 135px;           
+  padding: 10px;         
+  border: 1px solid #f4cfdf;
+  border-radius: 5px;
+  font-size: 16px;
+  margin-right: 5px;      
+  display: inline-block;  
+  vertical-align: middle; 
+}
+
+#todo-form {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  flex-wrap: wrap; 
+}
 
