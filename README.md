@@ -49,9 +49,6 @@ Todo-List/
 │── sw.js
 └── README.md
 
-yaml
-Copy code
-
 ---
 
 ## 📦 How to Run Locally
